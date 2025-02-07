@@ -1,0 +1,1 @@
+# simplex-constrained-sparse-optimization-via-tail-screening
