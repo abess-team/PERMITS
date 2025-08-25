@@ -9,9 +9,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-markers = ['D', '>', 'o', 's', 'X']
-dashes = [(2, 2), (1, 1), (3, 3), (3, 3), (5, 0)]
-palette = ['deepskyblue', 'deeppink', 'darkblue', 'purple', 'forestgreen']
+markers = ['D', '>', '>', '>', 'o', 's', 'X']
+dashes = [(2, 2), (1, 1), (1, 1), (1, 1), (3, 3), (3, 3), (5, 0)]
+palette = ['deepskyblue', 'deeppink', 'darkorange', 'darkseagreen', 'darkblue', 'purple', 'forestgreen']
 
 def plot(df, y, ylim, row, col, figsize=None):
     row_list = np.sort(df[row].unique())
@@ -67,26 +67,27 @@ def plot(df, y, ylim, row, col, figsize=None):
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(
         handles, labels, loc='lower center',
-        bbox_to_anchor=(0.5, -0.06), ncol=5
+        bbox_to_anchor=(0.5, -0.06), ncol=6
     )
     fig.tight_layout()
     return fig
 
 
-df = pd.read_csv('./dim_snr.csv')
-df = df.replace('IHT', 'IHT*').replace('SCOPE', 'SCOPE*').replace('LIMITS', 'PERMITS')
-
+df = pd.read_csv('./tol_acc_error.csv')
+df = df[~df['model'].isin(['SCOPE'])]
+df = df.replace(
+    'IHT', 'IHT*').replace(
+        'PERMITS-0.001', 'PERMITS (e-3)').replace(
+            'PERMITS-0.0001', 'PERMITS (e-4)').replace(
+            'PERMITS-1e-05', 'PERMITS (e-5)')
 row, col = 'snr', 'corr'
 
 # 1. Accuracy
 fig_accuracy = plot(df=df, y='accuracy', ylim=[(0, 1.05)]*3, 
                              row=row, col=col, figsize=(10, 6))
-# fig_accuracy.savefig('./accuracy.pdf', bbox_inches='tight', dpi=500) 
+fig_accuracy.savefig('./tol_accuracy.pdf', bbox_inches='tight', dpi=500) 
 
 # 2. Error
 fig_error = plot(df=df, y='err', ylim=[(0, 0.5), (0, 0.5), (0, 0.3)], 
                           row=row, col=col, figsize=(10, 6))
-# fig_error.savefig('./error.pdf', bbox_inches='tight', dpi=500)
-
-# fig_time = plot(df=df, y='time', ylim=[(0, 8)]*3, 
-#                           row=row, col=col, figsize=(10, 6))
+fig_error.savefig('./tol_error.pdf', bbox_inches='tight', dpi=500)

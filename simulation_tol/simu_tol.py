@@ -13,46 +13,9 @@ from datetime import datetime
 
 from models import HLasso, HElasticNet, IHT, Scope
 from tailscreening import TailScreening, SimplexSolver
+from utils import make_correlated_data
 import warnings
 warnings.filterwarnings('ignore')
-
-def make_correlated_data(
-        n_samples, 
-        n_features, 
-        sparsity=None,
-        w_true=None,
-        corr=0, 
-        snr=1,
-        random_state=None,
-):      
-        rng = np.random.default_rng(random_state)
-        if (w_true is None) and (not sparsity is None):
-            assert isinstance(sparsity, int)
-            supp = rng.choice(np.arange(n_features), sparsity, replace=False)
-            w_true = np.zeros(n_features)
-            w_true[supp] = 1 / sparsity
-        elif not w_true is None:
-            w_true = np.array(w_true).reshape(-1)
-        else:
-            raise ValueError('sparsity and w_true can not be None simultaneously.')
-        assert len(w_true) == n_features 
-
-        cov_matrix = np.fromfunction(
-            lambda i, j: (corr) ** np.abs(i-j), 
-            shape=(n_features, n_features)
-        )
-        
-        X = rng.multivariate_normal(
-            mean=np.zeros(n_features),
-            cov=cov_matrix,
-            size=n_samples
-        )
-
-        signal = X @ w_true
-        sigma = np.std(signal) / np.sqrt(snr)  # compute the noise-level according to SNR
-        noise = rng.standard_normal(n_samples) * sigma
-        y = X @ w_true + noise
-        return X, y, w_true
 
 class Simulator(object):
     def __init__(self,
@@ -76,11 +39,11 @@ class Simulator(object):
                                         'exclusion', 'err', 'time'])
         counter = 0
         for n, p, s, corr, snr, i in itertools.product(
-            n_list, 
-            p_list, 
-            s_list, 
-            corr_list, 
-            snr_list, 
+            self.n_list, 
+            self.p_list, 
+            self.s_list, 
+            self.corr_list, 
+            self.snr_list, 
             range(num_rep)
         ):
             # make data
@@ -92,7 +55,7 @@ class Simulator(object):
             assert len(supp_true) == s
 
             # model comparison
-            for model in model_list:
+            for model in self.model_list:
                 t_begin = time.time()
                 if str(model) == 'Oracle':
                     w_est = np.zeros(p)
@@ -142,22 +105,27 @@ class Simulator(object):
                 print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), result)
 
 
-
 if __name__ == '__main__':
     n_list = np.arange(100, 601, 50)
-    p_list = [1000]#[1000, 2000, 3000]
+    p_list = [1000]
     s_list = [10]
     corr_list = [0, 0.5, -0.5]
     snr_list = [0.5, 1, 5]
     model_list = [
         'Oracle',
-        TailScreening(),
+        TailScreening(tol_multiple=1e-3),
+        TailScreening(tol_multiple=1e-4),
+        TailScreening(tol_multiple=1e-5),
         IHT(), 
         HLasso(), 
-        # HElasticNet(),
-        # Scope(),
     ]
-
+    for model in model_list:
+        if str(model) == 'PERMITS':
+            model.name = 'PERMITS-' + str(model.tol_multiple)
+    for model in model_list:
+        print(str(model))
+    
+    # accuracy and error with n varied
     simulator = Simulator(
         n_list=n_list, 
         p_list=p_list, 
@@ -166,20 +134,20 @@ if __name__ == '__main__':
         snr_list=snr_list,
         model_list=model_list,
     )
-
     simulator.simulate(num_rep=50)
     df = simulator.df
+    df.to_csv('./tol_acc_error.csv', index=False)
 
-    df.to_csv('./dim_snr.csv', index=False)
 
-    # conda activate skscope
-    # cd C:\Users\uest\Desktop\new-self-regularization
-    # python simu_dim_snr.py > ../others/simu_dim_snr_log.txt
-    
-    # cd /home/chenpeng/Docs/new-self-regularization
-    # nohup python -u simulation.py > simulation_log.txt 2>&1 &
-    # jobs -l
-    # ps -aux | grep seq_train.py| grep -v grep
-    # kill -9 PID
-
-    # nohup python -u seq_test.py > test_log.txt 2>&1 &
+    # time with p varied
+    simulator = Simulator(
+        n_list=[500], 
+        p_list=np.arange(100, 1001, 50), 
+        s_list=s_list, 
+        corr_list=corr_list,
+        snr_list=snr_list,
+        model_list=model_list,
+    )
+    simulator.simulate(num_rep=50)
+    df = simulator.df
+    df.to_csv('./tol_time.csv', index=False)

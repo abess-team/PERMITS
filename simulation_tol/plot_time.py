@@ -9,9 +9,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-markers = ['D', '>', 'o', 's', 'X']
-dashes = [(2, 2), (1, 1), (3, 3), (3, 3), (5, 0)]
-palette = ['deepskyblue', 'deeppink', 'darkblue', 'purple', 'forestgreen']
+markers = ['D', '>', '>', '>', 'o', 's', 'X']
+dashes = [(2, 2), (1, 1), (1, 1), (1, 1), (3, 3), (3, 3), (5, 0)]
+palette = ['deepskyblue', 'deeppink', 'darkorange', 'darkseagreen', 'darkblue', 'purple', 'forestgreen']
 
 def plot(df, x, y, xlim, ylim, xlabel, figsize=None):
     corr_list = np.sort(df['corr'].unique())
@@ -52,17 +52,20 @@ def plot(df, x, y, xlim, ylim, xlabel, figsize=None):
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(
         handles, labels, loc='lower center',
-        bbox_to_anchor=(0.5, -0.06), ncol=5
+        bbox_to_anchor=(0.5, -0.15), ncol=6
     )
     fig.tight_layout()
     return fig
 
 
-df_p = pd.read_csv('./time_dimension.csv')
-# df_p = df_p[df_p['corr'] == 0.5]
-df_p = df_p.replace('IHT', 'IHT*').replace('SCOPE', 'SCOPE*').replace('LIMITS', 'PERMITS')
-df_p = df_p[df_p['model'] != 'SCOPE*']
-fig_time_p = plot(df=df_p, x='p', y='time', 
+df = pd.read_csv('./tol_time.csv')
+df = df.replace(
+    'IHT', 'IHT*').replace(
+        'PERMITS-0.001', 'PERMITS (e-3)').replace(
+            'PERMITS-0.0001', 'PERMITS (e-4)').replace(
+            'PERMITS-1e-05', 'PERMITS (e-5)')
+fig_time = plot(df=df, x='p', y='time', 
                   xlim=[(80, 1020)]*3, ylim=[(-0.1, 2)]*3, xlabel='Dimension',
                   figsize=(10, 3))
-# fig_time_p.savefig('./time_dimension.pdf', bbox_inches='tight', dpi=500) 
+fig_time.savefig('./tol_time_dimension.pdf', bbox_inches='tight', dpi=500) 
+
